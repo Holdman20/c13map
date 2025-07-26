@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Carte interactive de Cité 13 (Paris)</title>
+  <style>
+    body { font-family: sans-serif; }
+    .map-container { position: relative; width: 100%; max-width: 900px; margin: auto; }
+    svg path {
+      stroke: #000;
+      stroke-width: 0.5;
+      cursor: pointer;
+      transition: fill 0.2s;
+    }
+    svg path:hover {
+      opacity: 0.7;
+    }
+    .tooltip {
+      position: absolute;
+      background: rgba(0,0,0,0.8);
+      color: white;
+      padding: 6px 10px;
+      border-radius: 4px;
+      pointer-events: none;
+      display: none;
+      max-width: 300px;
+      font-size: 14px;
+    }
+    .UNION { fill: #4a90e2; }
+    .RESISTANCE { fill: #e94e77; }
+    .NEUTRE { fill: #cccccc; }
+    .admin-panel {
+      max-width: 900px;
+      margin: 20px auto;
+      padding: 15px;
+      background: #f4f4f4;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+    }
+    .admin-panel h2 {
+      margin-top: 0;
+    }
+    .admin-panel label {
+      display: block;
+      margin: 5px 0;
+    }
+    select { margin-left: 8px; }
+  </style>
+</head>
+<body>
+  <h1 style="text-align:center">Carte interactive de Cité 13</h1>
+  <div class="map-container">
+    <object id="svgMap" type="image/svg+xml" data="https://upload.wikimedia.org/wikipedia/commons/8/89/Paris_arrondissements.svg" width="100%"></object>
+    <div id="tooltip" class="tooltip"></div>
+  </div>
+
+  <div class="admin-panel">
+    <h2>Panneau Administrateur</h2>
+    <form id="adminForm"></form>
+  </div>
+
+  <script>
+    const data = {
+      '1': { title: "1er Arr.", text: "Quartier administratif.", hidden: false, control: "UNION" },
+      '2': { title: "2e Arr.", text: "Centre de commandement UNION.", hidden: false, control: "UNION" },
+      '3': { title: "3e Arr.", text: "Enclave résistante (Zone interdite).", hidden: false, control: "RESISTANCE" },
+      '4': { title: "4e Arr.", text: "Zone résidentielle mixte.", hidden: false, control: "NEUTRE" },
+      '5': { title: "5e Arr.", text: "Secteur scientifique et médical.", hidden: true, control: "NEUTRE" },
+      '6': { title: "6e Arr.", text: "Archives de l'Ancienne République.", hidden: false, control: "NEUTRE" },
+      '7': { title: "7e Arr.", text: "Poste de contrôle UNION.", hidden: false, control: "UNION" },
+      '8': { title: "8e Arr.", text: "Zone de quarantaine Xen.", hidden: true, control: "NEUTRE" },
+      '9': { title: "9e Arr.", text: "Entrée vers les catacombes. Présence résistante.", hidden: false, control: "RESISTANCE" },
+      '10': { title: "10e Arr.", text: "Centrale énergétique. Objectif stratégique.", hidden: false, control: "UNION" },
+      '11': { title: "11e Arr.", text: "Quartier ouvrier.", hidden: false, control: "NEUTRE" },
+      '12': { title: "12e Arr.", text: "Poste avancé de la Garde Républicaine.", hidden: true, control: "NEUTRE" },
+      '13': { title: "13e Arr.", text: "Base principale de la Croix de Lorraine.", hidden: false, control: "RESISTANCE" },
+      '14': { title: "14e Arr.", text: "Laboratoire ULTRIS dissimulé.", hidden: true, control: "NEUTRE" },
+      '15': { title: "15e Arr.", text: "Ancien hôpital, maintenant zone militaire.", hidden: false, control: "UNION" },
+      '16': { title: "16e Arr.", text: "Quartier abandonné, haut risque.", hidden: false, control: "NEUTRE" },
+      '17': { title: "17e Arr.", text: "Dépôt logistique UNION.", hidden: false, control: "UNION" },
+      '18': { title: "18e Arr.", text: "Zone artistique détournée par la résistance.", hidden: false, control: "RESISTANCE" },
+      '19': { title: "19e Arr.", text: "Camp de travail.", hidden: true, control: "NEUTRE" },
+      '20': { title: "20e Arr.", text: "Secteur en ruine, terrain d'opération.", hidden: false, control: "NEUTRE" }
+    };
+
+    const tooltip = document.getElementById('tooltip');
+    const svgMap = document.getElementById('svgMap');
+
+    svgMap.addEventListener('load', () => {
+      const svgDoc = svgMap.contentDocument;
+      Object.keys(data).forEach(id => {
+        const zone = svgDoc.getElementById(`arrondissement_${id}`);
+        if (zone) {
+          zone.setAttribute('class', data[id].control);
+          zone.addEventListener('mousemove', (e) => {
+            if (data[id].hidden) {
+              tooltip.style.display = 'none';
+              return;
+            }
+            tooltip.innerHTML = `<strong>${data[id].title}</strong><br>${data[id].text}`;
+            tooltip.style.display = 'block';
+            tooltip.style.left = (e.pageX + 12) + 'px';
+            tooltip.style.top = (e.pageY + 12) + 'px';
+          });
+          zone.addEventListener('mouseleave', () => {
+            tooltip.style.display = 'none';
+          });
+        }
+      });
+    });
+
+    // Admin panel
+    const form = document.getElementById("adminForm");
+    for (const id in data) {
+      const div = document.createElement("div");
+
+      const label = document.createElement("label");
+      label.textContent = `${data[id].title} : `;
+
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.checked = !data[id].hidden;
+      checkbox.addEventListener('change', () => {
+        data[id].hidden = !checkbox.checked;
+      });
+
+      const select = document.createElement("select");
+      ["UNION", "RESISTANCE", "NEUTRE"].forEach(role => {
+        const option = document.createElement("option");
+        option.value = role;
+        option.textContent = role;
+        if (role === data[id].control) option.selected = true;
+        select.appendChild(option);
+      });
+      select.addEventListener("change", () => {
+        data[id].control = select.value;
+        const svgZone = svgMap.contentDocument?.getElementById(`arrondissement_${id}`);
+        if (svgZone) svgZone.setAttribute("class", select.value);
+      });
+
+      div.appendChild(label);
+      div.appendChild(checkbox);
+      div.appendChild(select);
+      form.appendChild(div);
+    }
+  </script>
+</body>
+</html>
